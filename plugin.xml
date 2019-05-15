@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin
+  id="com-socketmobile-capturebasic-cordova"
+  version="0.1.0"
+  xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+  <name>CaptureBasicCordova</name>
+  <description>
+    This version of Capture for Cordova, provides only the device presence events and decoded data
+  </description>
+  <author>
+    Socket Mobile, Inc.
+  </author>
+  <keywords>barcode,scanner</keywords>
+  <license>Apache 2.0 License</license>
+  <js-module name="CaptureBasicCordova" src="www/CaptureBasicCordova.js">
+    <clobbers target="CaptureBasic" />
+  </js-module>
+  <platform name="ios">
+    <config-file parent="/*" target="config.xml">
+      <feature name="CaptureBasicCordova">
+        <param name="ios-package" value="CaptureBasicCordova" />
+      </feature>
+    </config-file>
+    <config-file target="*-Info.plist" parent="UISupportedExternalAccessoryProtocols">
+      <key>UISupportedExternalAccessoryProtocols</key>
+      <array>
+        <string>com.socketmobile.chs</string>
+      </array>
+    </config-file>
+    <source-file src="src/ios/CaptureBasicCordova.m" />
+    <source-file src="src/ios/sdk/SktCaptureHelper.m" />
+    <header-file src="src/ios/sdk/SktCaptureHelper.h" />
+    <header-file src="src/ios/sdk/SKTCapture.h" />
+    <header-file src="src/ios/sdk/SktCaptureDataSource.h" />
+    <header-file src="src/ios/sdk/SktCaptureErrors.h" />
+    <header-file src="src/ios/sdk/SktCaptureEvent.h" />
+    <header-file src="src/ios/sdk/SktCaptureProperty.h" />
+    <header-file src="src/ios/sdk/SktCapturePropertyIds.h" />
+    <header-file src="src/ios/sdk/SktCaptureVersion.h" />
+    <source-file src="src/ios/sdk/lib/libCaptureCore.a" framework="true"/>
+    <source-file src="src/ios/sdk/lib/libCaptureServiceDirect.a" framework="true"/>
+    <resource-file src="src/ios/sdk/socketmobilepublickey.pem"/>
+    <resource-file src="src/ios/sdk/softScanBeep.wav"/>
+    <framework src="ExternalAccessory.framework" />
+    <framework src="AudioToolbox.framework" />
+    <framework src="AVFoundation.framework" />
+    <framework src="CoreBluetooth.framework" />
+    <framework src="libc++.a" />
+    <framework src="libicucore.a" />
+  </platform>
+</plugin>

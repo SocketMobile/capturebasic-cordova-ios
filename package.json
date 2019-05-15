@@ -1,0 +1,11 @@
+{
+  "name": "capturebasiccordova",
+  "version": "0.1.0",
+  "cordova": {
+    "id": "com-socketmobile-capturebasic",
+    "platforms": [
+      "ios"
+    ]
+  },
+  "description": "Cordova Plugin for Socket Mobile Capture, basic features"
+}
