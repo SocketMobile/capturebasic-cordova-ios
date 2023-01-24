@@ -71,6 +71,13 @@
     return self;
 }
 
+-(ResponseBuilder*)addDictionary:(NSDictionary*)value withKey:(NSString*)key {
+    NSDictionary* dictionary = [NSDictionary dictionaryWithObjectsAndKeys:
+                                value, key, nil];
+    [response addEntriesFromDictionary:dictionary];
+    return self;
+}
+
 -(ResponseBuilder*)combineDictionary:(NSDictionary*)dictionary {
     [response addEntriesFromDictionary:dictionary];
     return self;
@@ -127,17 +134,34 @@
 - (void)getProperty:(CDVInvokedUrlCommand*)command {
     NSString* callbackId = command.callbackId;
     if(_capture != nil) {
+        __weak CaptureBasicCordova* weakSelf = self;
         NSDictionary* args = [command argumentAtIndex: 0];
+        NSString* handle = [args objectForKey: @"handle"];
         SKTCaptureProperty* property = [self getCapturePropertyFromArgs: args];
         SKTCaptureHelperDevice* device = [self getDeviceFromArgs: args];
         if(device != nil) {
-            [CaptureBasicCordova getProperty:property fromDevice:device];
+            [device getProperty:property
+               completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
         }
         else if([CaptureBasicCordova isCaptureProperty:property]){
-            [CaptureBasicCordova getProperty:property];
+            [_capture getProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
         }
         else {
-            //TODO: Error the property cannot be get, the device is not specified
+            [self sendError:(long) SKTCaptureE_INVALIDHANDLE withCallbackId:callbackId  keepCallback:NO];
         }
     }
     else {
@@ -149,17 +173,33 @@
 - (void)setProperty:(CDVInvokedUrlCommand*)command {
     NSString* callbackId = command.callbackId;
     if(_capture != nil) {
+        __weak CaptureBasicCordova* weakSelf = self;
         NSDictionary* args = [command argumentAtIndex: 0];
+        NSString* handle = [args objectForKey: @"handle"];
         SKTCaptureProperty* property = [self getCapturePropertyFromArgs: args];
         SKTCaptureHelperDevice* device = [self getDeviceFromArgs: args];
         if(device != nil) {
-            [CaptureBasicCordova setProperty:property toDevice:device];
+            [device setProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
         }
         else if([CaptureBasicCordova isCaptureProperty:property]){
-            [CaptureBasicCordova setProperty:property];
+            [_capture setProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
         }
         else {
-            //TODO: Error the property cannot be set, the device is not specified
+            [self sendError:(long) SKTCaptureE_INVALIDHANDLE withCallbackId:callbackId  keepCallback:NO];
         }
     }
     else {
@@ -170,6 +210,8 @@
 
 -(SKTCaptureHelperDevice*)getDeviceFromArgs:(NSDictionary*)args {
     SKTCaptureHelperDevice* device = nil;
+    NSString* handle = [args objectForKey: @"handle"];
+    device = [self getDeviceFromHandle:handle];
     return device;
 }
 
@@ -191,16 +233,40 @@
         case SKTCapturePropertyTypeNone:
             break;
         case SKTCapturePropertyTypeByte:
+        {
+            NSNumber* value = [args objectForKey: @"value"];
+            property.ByteValue = value.unsignedIntValue;
+        }
             break;
         case SKTCapturePropertyTypeUlong:
+        {
+            NSNumber* value = [args objectForKey: @"value"];
+            property.ULongValue = value.unsignedLongValue;
+        }
             break;
         case SKTCapturePropertyTypeArray:
+        {
+            NSArray* value = [args objectForKey: @"value"];
+            property.ArrayValue =  [NSKeyedArchiver archivedDataWithRootObject:value];
+        }
             break;
         case SKTCapturePropertyTypeString:
+            property.StringValue = [args objectForKey: @"value"];
             break;
         case SKTCapturePropertyTypeVersion:
             break;
         case SKTCapturePropertyTypeDataSource:
+        {
+            NSNumber* number;
+            NSDictionary* dataSource = [args objectForKey:@"value"];
+            number = [dataSource objectForKey:@"id"];
+            property.DataSource.ID = number.unsignedLongValue;
+            property.DataSource.Name = [dataSource objectForKey:@"name"];
+            number = [dataSource objectForKey:@"flags"];
+            property.DataSource.Flags = number.unsignedLongValue;
+            number = [dataSource objectForKey:@"status"];
+            property.DataSource.Status = number.unsignedLongValue;
+        }
             break;
         case SKTCapturePropertyTypeEnum:
             break;
@@ -238,7 +304,62 @@
     [result setKeepCallbackAsBool:keep];
     [self.commandDelegate sendPluginResult:result callbackId:callbackId];
 }
+-(void)sendJsonFromProperty:(SKTCaptureProperty*)property
+                 withHandle:(NSString*) handle
+             withCallbackId:(NSString*)callbackId
+               keepCallback:(BOOL) keep {
+    NSError* error;
+    ResponseBuilder* responseBuilder= [ResponseBuilder new];
+    [responseBuilder addString:handle withKey:@"handle"];
+    [responseBuilder addLong:property.ID withKey:@"propId"];
+    [responseBuilder addLong:property.Type withKey:@"propType"];
+    switch(property.Type){
+       case SKTCapturePropertyTypeNone:
+           break;
+       case SKTCapturePropertyTypeByte:
+            [responseBuilder addLong:property.ByteValue withKey:@"value"];
+           break;
+        case SKTCapturePropertyTypeUlong:
+            [responseBuilder addLong:property.ULongValue withKey:@"value"];
+            break;
+        case SKTCapturePropertyTypeString:
+            [responseBuilder addString:property.StringValue withKey:@"value"];
+            break;
+        case SKTCapturePropertyTypeArray:
+        {
+            NSArray *array = [NSKeyedUnarchiver unarchiveObjectWithData:property.ArrayValue];
+            [responseBuilder addArray:array withKey:@"value"];
+        }
+            break;
+        case SKTCapturePropertyTypeDataSource:
+        {
+            NSDictionary *dataSource = [CaptureBasicCordova convertToDictionaryFromDataSource:property.DataSource];
+            [responseBuilder addDictionary:dataSource withKey:@"value"];
+        }
+            break;
+        case SKTCapturePropertyTypeVersion:
+        {
+            NSDictionary *version = [CaptureBasicCordova convertToDictionaryFromVersion:property.Version];
+            [responseBuilder addDictionary:version withKey:@"value"];
+        }
+            break;
+        case SKTCapturePropertyTypeObject:
+            break;
+        case SKTCapturePropertyTypeEnum:
+            break;
+        case SKTCapturePropertyTypeLastType:
+            break;
+        case SKTCapturePropertyTypeNotApplicable:
+            break;
+    }
+    NSDictionary* propertyResult = [responseBuilder build];
+    NSData* jsonData = [NSJSONSerialization dataWithJSONObject:propertyResult options:NSJSONWritingPrettyPrinted error:&error];
 
+    NSString* jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
+    [result setKeepCallbackAsBool:keep];
+    [self.commandDelegate sendPluginResult:result callbackId:callbackId];
+}
 -(SKTCaptureHelperDevice*)getDeviceFromHandle:(NSString*)handle {
     SKTCaptureHelperDevice* device = nil;
     if (_capture != nil) {
@@ -259,26 +380,6 @@
     return handle;
 }
 
-+(void)getProperty:(SKTCaptureProperty*)property
-    fromDevice:(SKTCaptureHelperDevice*)device {
-    [device getProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *complete) {
-        // TODO needs to report the result to the app
-    }];
-}
-
-+(void)getProperty:(SKTCaptureProperty*)property {
-
-}
-
-+(void)setProperty:(SKTCaptureProperty*)property
-        toDevice:(SKTCaptureHelperDevice*)device {
-
-}
-
-+(void)setProperty:(SKTCaptureProperty*)property {
-
-}
-
 +(BOOL)isCaptureProperty:(SKTCaptureProperty*)property {
     BOOL isCapture = FALSE;
     long propertyId = (long)property.ID;
@@ -288,6 +389,30 @@
     return isCapture;
 }
 
++(NSDictionary*)convertToDictionaryFromVersion:(SKTCaptureVersion*) version {
+    NSDictionary* result = [[NSDictionary alloc] initWithObjectsAndKeys:
+                            [NSString stringWithFormat:@"%lx",version.Major],@"major",
+                            [NSString stringWithFormat:@"%lx",version.Middle],@"middle",
+                            [NSString stringWithFormat:@"%lx",version.Minor],@"minor",
+                            [NSString stringWithFormat:@"%ld",version.Build],@"build",
+                            [NSString stringWithFormat:@"%d",version.Month],@"month",
+                            [NSString stringWithFormat:@"%d",version.Day],@"day",
+                            [NSString stringWithFormat:@"%d",version.Year],@"year",
+                            [NSString stringWithFormat:@"%d",version.Hour],@"hour",
+                            [NSString stringWithFormat:@"%d",version.Minute],@"minute",
+                             nil];
+    return result;
+}
+
++(NSDictionary*)convertToDictionaryFromDataSource:(SKTCaptureDataSource*) dataSource {
+    NSDictionary* result = [[NSDictionary alloc] initWithObjectsAndKeys:
+                            [NSString stringWithFormat:@"%ld",dataSource.ID],@"id",
+                            [NSString stringWithFormat:@"%@",dataSource.Name],@"name",
+                            [NSString stringWithFormat:@"%ld",(long)dataSource.Flags],@"flags",
+                            [NSString stringWithFormat:@"%ld",dataSource.Status],@"status",
+                             nil];
+    return result;
+}
 #pragma  mark - CaptureBasicHelperDelegate
 /**
  * called each time a device connects to the host
