@@ -6,7 +6,8 @@
   xmlns:android="http://schemas.android.com/apk/res/android">
   <name>CaptureBasicCordova</name>
   <description>
-    This version of Capture for Cordova, provides only the device presence events and decoded data
+    This version of Capture for Cordova, provides the device presence events, 
+    the decoded data event and access to the properties (battery level, trigger, symbology selection etc...)
   </description>
   <author>
     Socket Mobile, Inc.
@@ -29,24 +30,6 @@
       </array>
     </config-file>
     <source-file src="src/ios/CaptureBasicCordova.m" />
-    <source-file src="src/ios/sdk/SktCaptureHelper.m" />
-    <header-file src="src/ios/sdk/SktCaptureHelper.h" />
-    <header-file src="src/ios/sdk/SKTCapture.h" />
-    <header-file src="src/ios/sdk/SktCaptureDataSource.h" />
-    <header-file src="src/ios/sdk/SktCaptureErrors.h" />
-    <header-file src="src/ios/sdk/SktCaptureEvent.h" />
-    <header-file src="src/ios/sdk/SktCaptureProperty.h" />
-    <header-file src="src/ios/sdk/SktCapturePropertyIds.h" />
-    <header-file src="src/ios/sdk/SktCaptureVersion.h" />
-    <source-file src="src/ios/sdk/lib/libCaptureCore.a" framework="true"/>
-    <source-file src="src/ios/sdk/lib/libCaptureServiceDirect.a" framework="true"/>
-    <resource-file src="src/ios/sdk/socketmobilepublickey.pem"/>
-    <resource-file src="src/ios/sdk/softScanBeep.wav"/>
-    <framework src="ExternalAccessory.framework" />
-    <framework src="AudioToolbox.framework" />
-    <framework src="AVFoundation.framework" />
-    <framework src="CoreBluetooth.framework" />
-    <framework src="libc++.a" />
-    <framework src="libicucore.a" />
+    <framework src="src/ios/sdk/lib/CaptureSDK.xcframework" custom="true"/>
   </platform>
 </plugin>

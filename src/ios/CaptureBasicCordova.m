@@ -1,7 +1,7 @@
 /********* CaptureBasicCordova.m Cordova Plugin Implementation *******/
 
 #import <Cordova/CDV.h>
-#import "SktCaptureHelper.h"
+#import <CaptureSDK/CaptureSDK.h>
 
 @interface ResponseBuilder: NSObject {
     NSMutableDictionary* response;

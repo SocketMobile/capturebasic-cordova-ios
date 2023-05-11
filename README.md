@@ -6,10 +6,10 @@ This Socket Mobile Capture Basic iOS Cordova plugin allows to use Socket Mobile 
 
 This Cordova plugin supports only iOS at this time.
 
-**NOTE** This code is subject to change. This should be considered as early beta.
+**NOTE** This code is subject to change. This should be considered as beta.
 
-**NOTE** A future installation will use Capture Cocoapods directly, which would make easier to include this SDK directly to your project, but this version does require a clone of the project and a and clone of Capture Cocoapods.
-Make sure to watch this repository to be notified when such version will be made available.
+**NOTE** This version requires a clone of this project and a clone of CaptureSDK Cocoapods.
+Make sure to watch this repository to be notified when new updates are made available.
 
 ## Installation
 
@@ -20,10 +20,10 @@ Update the Capture Basic Cordova plugin with the Capture SDK files:
 
 ```sh
 $> cd capturebasic-cordova-ios
-$> updateCaptureSdk.sh
+$> ./updateCaptureSdk.sh
 ```
 
-Once the Capture Basic Cordova plugin has been updated with the Capture SDK files then the plugin is now ready to be added to your Cordova application:
+Once the Capture Basic Cordova plugin has been updated with the CaptureSDK files then the plugin is now ready to be added to your Cordova application:
 
 ```sh
 $> cordova plugin add /Users/me/documents/dev/github/capturebasic-cordova-ios
@@ -35,12 +35,27 @@ To remove the plugin from your Cordova application:
 $> cordova plugin remove com-socketmobile-capturebasic-cordova
 ```
 
+**IMPORTANT**
+Make sure the CaptureSDK.xcframework is embedded and signed in the General settings of your project.
+
+![General settings](assets/xcode-general.png)
+
+
+## Prequisites settings for the application
+
+Since the CaptureSDK is using Bluetooth make sure the following items are in your info.plist of your application:
+
+Supported External Protocol String should have an entry set to `com.socketmobile.chs`.
+
+The Bluetooth Always Usage Description string should be set to describe to the end-user why we need the Bluetooth permission.
+
+![Info.plist](assets/xcode-info-plist.png)
+
 ## Using the SDK in a Cordova application
 
 This current version of the Capture SDK for Cordova is limited to notifications coming from the Socket Mobile barcode scanner.
 
-If the code of your application is written using Typescript, you may want to
-declare the main object of the Capture Basic SDK as shown here:
+If the code of your application is written using Typescript, you may want to declare the main object of the Capture Basic SDK as shown here:
 
 ```sh
 declare let CaptureBasic: any;
