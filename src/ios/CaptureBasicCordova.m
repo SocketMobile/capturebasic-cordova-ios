@@ -139,7 +139,21 @@
         NSString* handle = [args objectForKey: @"handle"];
         SKTCaptureProperty* property = [self getCapturePropertyFromArgs: args];
         SKTCaptureHelperDevice* device = [self getDeviceFromArgs: args];
-        if(device != nil) {
+                SKTCaptureHelperDeviceManager* deviceManager = nil;
+        if([device isKindOfClass:[SKTCaptureHelperDeviceManager class]]){
+            deviceManager = (SKTCaptureHelperDeviceManager*)device;
+        }
+        if(deviceManager != nil) {
+            [deviceManager getProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
+        }
+        else if(device != nil) {
             [device getProperty:property
                completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
                 if(SKTSUCCESS(result)){
@@ -178,7 +192,21 @@
         NSString* handle = [args objectForKey: @"handle"];
         SKTCaptureProperty* property = [self getCapturePropertyFromArgs: args];
         SKTCaptureHelperDevice* device = [self getDeviceFromArgs: args];
-        if(device != nil) {
+        SKTCaptureHelperDeviceManager* deviceManager = nil;
+        if([device isKindOfClass:[SKTCaptureHelperDeviceManager class]]){
+            deviceManager = (SKTCaptureHelperDeviceManager*)device;
+        }
+        if(deviceManager != nil) {
+            [deviceManager setProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
+                if(SKTSUCCESS(result)){
+                    [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
+                }
+                else {
+                    [weakSelf sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+                }
+            }];
+        }
+        else if(device != nil) {
             [device setProperty:property completionHandler:^(SKTResult result, SKTCaptureProperty *property) {
                 if(SKTSUCCESS(result)){
                     [weakSelf sendJsonFromProperty:property withHandle:handle withCallbackId:callbackId keepCallback:NO];
@@ -371,11 +399,26 @@
                 break;
             }
         }
+        if(device == nil) {
+            devices = [_capture getDeviceManagersList];
+            for (SKTCaptureHelperDeviceManager* d in devices) {
+                NSString* h = [CaptureBasicCordova getHandleFromDevice:d];
+                if ([h containsString:handle]) {
+                    device = d;
+                    break;
+                }
+            }
+        }
     }
     return device;
 }
 
 +(NSString*)getHandleFromDevice:(SKTCaptureHelperDevice*)device {
+    NSString* handle = [NSString stringWithFormat:@"%ld",(long)device];
+    return handle;
+}
+
++(NSString*)getHandleFromDeviceManager:(SKTCaptureHelperDeviceManager*)device {
     NSString* handle = [NSString stringWithFormat:@"%ld",(long)device];
     return handle;
 }
@@ -457,6 +500,51 @@
         build ];
 
     [self sendJsonFromDictionary:deviceRemoval withCallbackId:callbackId keepCallback:YES];
+}
+
+/**
+ * called each time a device manager connects to the host
+ * @param result contains the result of the connection
+ * @param deviceInfo contains the device information
+ */
+-(void)didNotifyArrivalForDeviceManager:(SKTCaptureHelperDeviceManager *)device
+                      withResult:(SKTResult)result{
+    NSLog(@"didNotifyArrivalForDeviceManager: %@ Result: %ld", device.friendlyName, result);
+    NSString* callbackId = self->_callbackId;
+
+    NSString* handle = [CaptureBasicCordova getHandleFromDeviceManager:device];
+    NSDictionary* deviceManagerArrival =
+        [[[[[[[[ResponseBuilder new]
+                        addName:@"deviceManagerArrival"]
+                addResponseType:@"deviceType"]
+                      addString:handle withKey:@"deviceHandle"]
+                      addString:device.friendlyName withKey: @"deviceName"]
+                        addLong:(long)device.deviceType withKey: @"deviceType"]
+                        addResult:(long)result]
+                                 build];
+
+    [self sendJsonFromDictionary:deviceManagerArrival withCallbackId:callbackId keepCallback:YES];
+}
+
+/**
+ * called each time a device manager disconnect from the host
+ * @param deviceRemoved contains the device information
+ */
+ -(void) didNotifyRemovalForDeviceManager:(SKTCaptureHelperDeviceManager*) deviceRemoved
+                        withResult:(SKTResult)result {
+    NSString* callbackId = self->_callbackId;
+    NSString* handle = [CaptureBasicCordova getHandleFromDeviceManager: deviceRemoved];
+    NSDictionary* deviceManagerRemoval =
+        [[[[[[[[ResponseBuilder new]
+        addName:@"deviceManagerRemoval"]
+        addResponseType:@"deviceType"]
+        addString:deviceRemoved.friendlyName withKey:@"deviceName"]
+        addLong:deviceRemoved.deviceType withKey:@"deviceType"]
+        addString:handle withKey:@"deviceHandle"]
+        addResult:(long)result]
+        build ];
+
+    [self sendJsonFromDictionary:deviceManagerRemoval withCallbackId:callbackId keepCallback:YES];
 }
 
 /**
