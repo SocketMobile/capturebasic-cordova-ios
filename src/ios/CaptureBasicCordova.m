@@ -119,7 +119,12 @@
             NSDictionary* response = [[[ResponseBuilder new]
                                        addResult:result]
                                       build];
-            [self sendJsonFromDictionary:response withCallbackId:callbackId keepCallback:NO];
+            if(SKTSUCCESS(result)){
+                [self sendJsonFromDictionary:response withCallbackId:callbackId keepCallback:NO];
+            }
+            else {
+                [self sendError:(long) result withCallbackId:callbackId  keepCallback:NO];
+            }
         }];
     }
     else {
@@ -316,9 +321,21 @@
                           addName:@"onError"]
                          addResult:result]
                          build];
-    [self sendJsonFromDictionary:error
+    [self sendErrorJsonFromDictionary:error
                   withCallbackId:callbackId
                    keepCallback:keep];
+}
+
+-(void)sendErrorJsonFromDictionary:(NSDictionary*)dictionary
+               withCallbackId:(NSString*)callbackId
+                 keepCallback:(BOOL) keep {
+    NSError* error;
+    NSData* jsonData = [NSJSONSerialization dataWithJSONObject:dictionary options:NSJSONWritingPrettyPrinted error:&error];
+
+    NSString* jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:jsonString];
+    [result setKeepCallbackAsBool:keep];
+    [self.commandDelegate sendPluginResult:result callbackId:callbackId];
 }
 
 -(void)sendJsonFromDictionary:(NSDictionary*)dictionary
@@ -332,6 +349,7 @@
     [result setKeepCallbackAsBool:keep];
     [self.commandDelegate sendPluginResult:result callbackId:callbackId];
 }
+
 -(void)sendJsonFromProperty:(SKTCaptureProperty*)property
                  withHandle:(NSString*) handle
              withCallbackId:(NSString*)callbackId
