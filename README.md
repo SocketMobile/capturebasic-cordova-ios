@@ -11,6 +11,8 @@ This Cordova plugin supports only iOS at this time.
 **NOTE** This version requires a clone of this project and a clone of CaptureSDK Cocoapods.
 Make sure to watch this repository to be notified when new updates are made available.
 
+**NOTE** Most of Socket Mobile products are using Bluetooth Classic, but the NFC products (D600) and counter top products (S550, S370) are using BluetoothLE (Low Energy). Check the BluetoothLE paragraph for more information.
+
 ## Installation
 
 Clone this repository:
@@ -274,3 +276,44 @@ If an error occurs, Capture will send an event that includes the error code.
   "result" : -27
 }
 ```
+
+## BluetoothLE products, mostly NFC Reader/Writer (D600, S550, S370)
+
+The BluetoothLE uses a Bluetooth Manager with a concept of Favorite.
+
+If the Favorite is set to an empty string (default), CaptureSDK won't discover any BluetoothLE devices. If it will discover only Bluetooth Classic devices.
+
+If the Favorite is set with one \* (wildchar) then it will discover and connect to ONE BluetoothLE Socket product. If the Favorite is set with 2 \* (wildchar) it will discover and connect to 2 BluetoothLE Socket products.
+
+Here is an example of setting the Bluetooth Manager favorite
+
+```javascript
+function onDeviceReady() {
+    // Cordova is now initialized. Have fun!
+    CaptureBasic.addListener('notifications', (success)=>{
+        console.log('Capture received: ', success);
+        const result = JSON.parse(success);
+        if(result.name === 'deviceArrival'){
+            console.log('got a device arrival, ask for battery level');
+            .../...
+        }
+        else if(result.name === 'deviceManagerArrival'){
+            console.log('got a device manager arrival, set the favorite to discover BLE devices');
+            deviceHandle = result.deviceHandle;
+            const property = {
+                handle: deviceHandle,
+                propId: 328193, // Favorite
+                propType: 5, // argument string
+                value: '*' // any Socket Mobile BLE
+            };
+            CaptureBasic.setProperty(property, success => {
+                console.log('setProperty success: ', success);
+            }, error => {
+                console.log('setProperty error: ', error);
+            })
+        }
+```
+
+Once the Device Manager favorite is set, the BluetoothLE Socket Mobile product will connects as soon as it is turned on. The Capture Basic will send a notification if the device connects or disconnects like any other Socket Mobile products.
+
+
